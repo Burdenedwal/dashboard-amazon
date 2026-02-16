@@ -2,211 +2,237 @@ import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
 
-# Configuração de Layout de Alta Performance
+# --- CONFIGURAÇÃO DE ALTA PERFORMANCE ---
 st.set_page_config(
-    page_title="Amazon FBA | Pro Financial Intelligence",
-    page_icon="💰",
-    layout="wide"
+    page_title="Amazon FBA | Command Center",
+    page_icon="🦅",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# Design System Avançado (Estética Moderna e Profissional)
+# --- DESIGN SYSTEM "WALL STREET" ---
 st.markdown("""
     <style>
-    .stApp { background-color: #f8fafc; }
-    .main-card {
-        background-color: #ffffff;
+    .stApp { background-color: #f0f2f6; }
+    .main-header {
+        font-family: 'Helvetica Neue', sans-serif;
+        color: #232f3e;
+        font-weight: 700;
+        margin-bottom: 0px;
+    }
+    .metric-container {
+        background-color: white;
         padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        margin-bottom: 20px;
+        border-radius: 10px;
+        border-left: 5px solid #ff9900;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
-    .metric-label { font-size: 0.9rem; color: #64748b; font-weight: 600; }
-    [data-testid="stMetricValue"] { font-size: 2.2rem; color: #0f172a; }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; background-color: transparent; }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #e2e8f0;
-        border-radius: 10px 10px 0 0;
-        padding: 10px 20px;
-        color: #475569;
+    .warning-box {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 15px;
+        border-radius: 5px;
+        font-size: 0.9rem;
     }
-    .stTabs [aria-selected="true"] { 
-        background-color: #232f3e !important; 
-        color: #ffffff !important; 
-    }
+    div[data-testid="stMetricValue"] { font-size: 24px; color: #111; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- SIDEBAR: MOTOR FINANCEIRO ---
+# --- SIDEBAR: PARÂMETROS ESTRATÉGICOS ---
 with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg", width=130)
-    st.title("🎛️ Configurações Mestre")
+    st.image("https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg", width=140)
+    st.markdown("### ⚙️ Engine Financeiro")
     
-    with st.expander("📊 Fiscal e Marketplace", expanded=True):
-        taxa_imposto = st.number_input("Imposto (Simples Nacional %)", 0.0, 30.0, 6.0, help="Sua alíquota efetiva de imposto sobre a venda bruta.") / 100
-        comissao_amazon = st.number_input("Comissão da Amazon (%)", 0.0, 25.0, 15.0, help="Comissão padrão da categoria do produto.") / 100
-        taxa_fixa_venda = st.number_input("Taxa Fixa p/ Itens < R$79 (R$)", 0.0, 20.0, 5.0)
+    with st.expander("📊 Fiscal & Marketplace", expanded=True):
+        taxa_imposto = st.number_input("Imposto Simples/Presumido (%)", 0.0, 35.0, 6.0, step=0.5) / 100
+        comissao_amazon = st.number_input("Comissão Amazon (%)", 0.0, 30.0, 15.0, step=0.5) / 100
+        taxa_fixa = st.number_input("Taxa Fixa (<R$79)", 0.0, 10.0, 5.0)
 
-    with st.expander("📦 Logística FBA Avançada", expanded=True):
-        tarifa_saida = st.number_input("Tarifa de Despacho FBA (R$)", 0.0, 200.0, 14.50, help="Custo de picking e packing da Amazon.")
-        custo_inbound = st.number_input("Frete p/ CD Amazon (Unidade R$)", 0.0, 100.0, 1.50)
-        armazenagem = st.number_input("Custo de Estocagem (Mês/Un R$)", 0.0, 50.0, 0.45)
-        perda_estimada = st.slider("Margem de Perda/Devolução (%)", 0.0, 10.0, 1.5) / 100
+    with st.expander("📦 Logística & Estoque", expanded=True):
+        fba_fee = st.number_input("Tarifa FBA (Peso/Dimensão)", 0.0, 500.0, 14.50, help="Consulte a tabela da Amazon baseada no peso cubado.")
+        frete_inbound = st.number_input("Frete Fornecedor->Amazon (Unit)", 0.0, 100.0, 1.20)
+        custo_estoque_mes = st.number_input("Custo Mensal Armazenagem (Unit)", 0.0, 50.0, 0.45)
+        meses_estoque = st.slider("Giro de Estoque (Meses)", 1, 12, 1, help="Quanto tempo o produto fica parado pagando aluguel?")
+        perda_estoque = st.slider("Provisionamento de Perda/Quebra (%)", 0.0, 10.0, 1.5) / 100
+
+    with st.expander("📢 Marketing (PPC)", expanded=True):
+        tacos_target = st.slider("Target TACOS (%)", 0.0, 40.0, 10.0, help="Total Advertising Cost of Sales: Quanto da receita total você gasta em anúncios.") / 100
 
     st.divider()
-    st.success("Configurações aplicadas com sucesso!")
+    st.caption("v2.0 Pro - Desenvolvido para Alta Performance")
 
-# --- MOTOR DE CÁLCULO PROFISSIONAL ---
-def engine_financeiro(venda, custo_compra):
-    # Valores Absolutos
-    v_imposto = venda * taxa_imposto
-    v_comissao = venda * comissao_amazon
-    v_taxa_fixa = taxa_fixa_venda if venda < 79.0 else 0.0
-    v_perda = venda * perda_estimada
+# --- CORE CALCULATION ENGINE ---
+def calcular_cenario(preco, custo_prod):
+    # Receita Líquida de Vendas
+    imposto_val = preco * taxa_imposto
     
-    # Custos de Operação
-    custos_logistica = tarifa_saida + custo_inbound + armazenagem + v_taxa_fixa
-    custos_variaveis_venda = v_imposto + v_comissao + v_perda
+    # Custos Variáveis de Venda
+    comissao_val = preco * comissao_amazon
+    taxa_fixa_val = taxa_fixa if preco < 79.0 else 0.0
+    ads_val = preco * tacos_target
+    perda_val = preco * perda_estoque
     
-    # Margens
-    # Margem Bruta = (Venda - Custo Produto) / Venda
-    lucro_bruto_valor = venda - custo_compra
-    margem_bruta = (lucro_bruto_valor / venda) * 100 if venda > 0 else 0
+    # Custos Logísticos Totais
+    armazenagem_total = custo_estoque_mes * meses_estoque
+    logistica_total = fba_fee + frete_inbound + armazenagem_total + taxa_fixa_val
     
-    # Margem Líquida = (Venda - Todos os Custos) / Venda
-    total_custos = custo_compra + custos_logistica + custos_variaveis_venda
-    lucro_liquido = venda - total_custos
-    margem_liquida = (lucro_liquido / venda) * 100 if venda > 0 else 0
+    # Custo Total e Lucros
+    custos_totais = custo_prod + logistica_total + comissao_val + imposto_val + ads_val + perda_val
+    lucro_liquido = preco - custos_totais
     
-    # ROI e Markup
-    roi = (lucro_liquido / custo_compra) * 100 if custo_compra > 0 else 0
-    markup = venda / custo_compra if custo_compra > 0 else 0
+    # Métricas
+    margem_bruta = ((preco - custo_prod) / preco) * 100 if preco > 0 else 0
+    margem_liquida = (lucro_liquido / preco) * 100 if preco > 0 else 0
+    roi = (lucro_liquido / custo_prod) * 100 if custo_prod > 0 else 0
+    markup = preco / custo_prod if custo_prod > 0 else 0
     
     return {
-        "venda": venda, "custo": custo_compra, "lucro": lucro_liquido,
-        "m_bruta": margem_bruta, "m_liquida": margem_liquida, "roi": roi, "markup": markup,
-        "imposto_val": v_imposto, "comissao_val": v_comissao, "logistica_val": custos_logistica,
-        "perda_val": v_perda, "total_custos": total_custos
+        "Preço": preco,
+        "Custo Produto": custo_prod,
+        "Imposto": imposto_val,
+        "Comissão Amazon": comissao_val,
+        "Logística FBA": logistica_total,
+        "Marketing (Ads)": ads_val,
+        "Perdas/Outros": perda_val,
+        "Lucro Líquido": lucro_liquido,
+        "Margem Líquida": margem_liquida,
+        "ROI": roi,
+        "Markup": markup,
+        "Break_Even": custos_totais - imposto_val - comissao_val - ads_val # Aproximado
     }
 
-# --- UI PRINCIPAL ---
-st.title("🚀 Amazon FBA Strategy Suite")
+# --- MAIN UI ---
+st.title("🦅 Amazon FBA Command Center")
+nome_sku = st.text_input("Identificação do Produto (SKU/ASIN)", placeholder="Ex: Fone Bluetooth Pro X...")
 
-nome_p = st.text_input("📦 Identificação do SKU", placeholder="Digite o nome do produto ou código SKU")
-st.markdown(f"### Dashboard de Análise: **{nome_p if nome_p else 'Produto Exemplo'}**")
-
-tab_sim, tab_rev, tab_promo, tab_sens = st.tabs([
-    "🔍 Simulador 360°", "🔄 Markup Reverso", "🎁 Mix de Promoção", "📈 Tabela de Elasticidade"
+# Abas de Navegação
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📊 P&L e Waterfall", 
+    "🎯 Simulador Reverso", 
+    "📈 Análise de Sensibilidade",
+    "🤖 Diagnóstico IA"
 ])
 
-# --- TAB 1: SIMULADOR 360 ---
-with tab_sim:
-    c1, c2 = st.columns([1, 2], gap="large")
-    with c1:
-        st.subheader("Configuração de Venda")
-        custo_prod = st.number_input("Preço de Custo (NF-e)", 0.01, 10000.0, 65.0, key="s_c")
-        preco_venda = st.number_input("Preço de Venda (Amazon)", 0.01, 20000.0, 189.90, key="s_v")
+# --- TAB 1: WATERFALL & P&L ---
+with tab1:
+    col_input, col_kpi = st.columns([1, 3], gap="large")
+    
+    with col_input:
+        st.subheader("Inputs do Produto")
+        c_prod = st.number_input("Custo de Aquisição (CMV)", 0.0, 10000.0, 45.00)
+        p_venda = st.number_input("Preço de Venda (Buybox)", 0.0, 10000.0, 129.90)
         
-        dados = engine_financeiro(preco_venda, custo_prod)
-        st.divider()
-        st.write("**Resumo por Unidade:**")
-        st.write(f"Sobra no bolso: **R$ {dados['lucro']:.2f}**")
-        st.write(f"Ponto de Equilíbrio: **R$ {dados['total_custos']:.2f}**")
+        data = calcular_cenario(p_venda, c_prod)
+        
+        st.markdown("---")
+        st.markdown("**Resumo Rápido:**")
+        if data['Lucro Líquido'] > 0:
+            st.success(f"Lucro: R$ {data['Lucro Líquido']:.2f}/un")
+        else:
+            st.error(f"Prejuízo: R$ {data['Lucro Líquido']:.2f}/un")
 
-    with c2:
-        # Cards de Performance
-        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-        col_m1.metric("Margem Bruta", f"{dados['m_bruta']:.1f}%", help="Diferença entre custo de compra e venda.")
-        col_m2.metric("Margem Líquida", f"{dados['m_liquida']:.1f}%", help="O que sobra após TODAS as taxas e perdas.")
-        col_m3.metric("ROI", f"{dados['roi']:.1f}%", help="Retorno sobre o capital investido no estoque.")
-        col_m4.metric("Markup", f"{dados['markup']:.2f}x")
-
-        # Gráfico Avançado
-        fig = go.Figure()
-        # CORREÇÃO AQUI: Removido o argumento 'name' duplicado
-        fig.add_trace(go.Bar(
-            y=['Financeiro'],
-            x=[dados['custo']], 
-            orientation='h', 
-            name="Custo Produto", 
-            marker_color='#cbd5e1'
+    with col_kpi:
+        # KPI ROW
+        k1, k2, k3, k4 = st.columns(4)
+        k1.metric("Margem Líquida", f"{data['Margem Líquida']:.1f}%", delta_color="normal" if data['Margem Líquida'] > 15 else "inverse")
+        k2.metric("ROI (Retorno)", f"{data['ROI']:.1f}%")
+        k3.metric("Markup", f"{data['Markup']:.2f}x")
+        k4.metric("Custo Mkt (Ads)", f"R$ {data['Marketing (Ads)']:.2f}")
+        
+        # CHART ROW: WATERFALL (O Pulo do Gato Financeiro)
+        fig = go.Figure(go.Waterfall(
+            name = "Fluxo de Caixa", orientation = "v",
+            measure = ["relative", "relative", "relative", "relative", "relative", "relative", "relative", "total"],
+            x = ["Venda Bruta", "Imposto", "Comissão", "FBA & Logística", "Custo Produto", "Ads (PPC)", "Perdas", "LUCRO LÍQUIDO"],
+            textposition = "outside",
+            text = [f"R${x:.2f}" for x in [data['Preço'], -data['Imposto'], -data['Comissão Amazon'], -data['Logística FBA'], -data['Custo Produto'], -data['Marketing (Ads)'], -data['Perdas/Outros'], data['Lucro Líquido']]],
+            y = [data['Preço'], -data['Imposto'], -data['Comissão Amazon'], -data['Logística FBA'], -data['Custo Produto'], -data['Marketing (Ads)'], -data['Perdas/Outros'], data['Lucro Líquido']],
+            connector = {"line":{"color":"rgb(63, 63, 63)"}},
+            decreasing = {"marker":{"color":"#FF5252"}}, # Vermelho para custos
+            increasing = {"marker":{"color":"#2ECC71"}}, # Verde para Venda
+            totals = {"marker":{"color":"#232F3E"}}      # Azul Amazon para Lucro
         ))
-        fig.add_trace(go.Bar(
-            name='Amazon + Gov',
-            y=['Financeiro'],
-            x=[dados['imposto_val'] + dados['comissao_val'] + dados['logistica_val']], 
-            orientation='h', 
-            marker_color='#232f3e'
-        ))
-        fig.add_trace(go.Bar(
-            name='Lucro Real',
-            y=['Financeiro'],
-            x=[max(0, dados['lucro'])], 
-            orientation='h', 
-            marker_color='#ff9900'
-        ))
-        fig.update_layout(barmode='stack', height=250, margin=dict(t=30, b=20), title="Visão de Fluxo por Venda")
+        fig.update_layout(title="Demonstrativo de Resultado (Unitário)", showlegend=False, height=400)
         st.plotly_chart(fig, use_container_width=True)
 
 # --- TAB 2: REVERSO ---
-with tab_rev:
-    st.subheader("🎯 Atingir Meta de Lucratividade")
-    c_r1, c_r2 = st.columns(2)
-    with c_r1:
-        custo_r = st.number_input("Custo de Compra", 0.1, 10000.0, 65.0, key="r_c")
-        meta_margem = st.slider("Qual sua meta de Margem Líquida (%)?", 5.0, 60.0, 18.0)
+with tab2:
+    st.subheader("🎯 Definindo Preço pela Meta")
+    cr1, cr2 = st.columns(2)
+    with cr1:
+        custo_rev = st.number_input("Custo do Produto", 0.0, 5000.0, 45.0, key="rev_c")
+        target_margin = st.slider("Meta de Margem Líquida (%)", 0, 50, 20)
     
-    # Cálculo Reverso Real
-    # V = (Custo + Logistica) / (1 - %Imp - %Comis - %Perda - %Meta)
-    den = (1 - taxa_imposto - comissao_amazon - perda_estimada - (meta_margem/100))
-    if den > 0:
-        v_sugerida = (custo_r + tarifa_saida + custo_inbound + armazenagem) / den
-        with c_r2:
-            st.success(f"### Preço de Venda Alvo: R$ {v_sugerida:.2f}")
-            st.info(f"Para ter {meta_margem}% de lucro limpo, este deve ser seu preço.")
-    else:
-        st.error("Meta inalcançável com os custos atuais.")
+    # Cálculo Reverso Complexo com Ads e Logística
+    # Preço = (CustosFixos) / (1 - %Varaveis)
+    # Variáveis: Imposto, Comissão, Ads, Perda, MargemMeta
+    denominator = 1 - (taxa_imposto + comissao_amazon + tacos_target + perda_estoque + (target_margin/100))
+    custos_fixos_abs = custo_rev + fba_fee + frete_inbound + (custo_estoque_mes * meses_estoque)
+    
+    with cr2:
+        if denominator > 0:
+            price_target = custos_fixos_abs / denominator
+            if price_target < 79: price_target += taxa_fixa # Ajuste simples
+            
+            st.metric("Preço Sugerido de Venda", f"R$ {price_target:.2f}")
+            st.info(f"Para sobrar **{target_margin}%** limpo no bolso, considerando que você vai gastar **{tacos_target*100}%** em anúncios.")
+        else:
+            st.error("Matematicamente impossível atingir essa margem com os custos atuais.")
 
-# --- TAB 3: PROMOÇÕES ---
-with tab_promo:
-    st.subheader("🎁 Simulador 'Leve 2, Ganhe Desconto'")
-    st.markdown("Analise a viabilidade de cupons e descontos progressivos.")
+# --- TAB 3: SENSIBILIDADE ---
+with tab3:
+    st.subheader("🧪 Matriz de Decisão")
+    st.write("Simulação de Variação de Preço e Impacto no Lucro Anual (Est. 1000 un/mês)")
     
-    c_p1, c_p2 = st.columns(2)
-    with c_p1:
-        unidades_promo = st.number_input("Quantidade no Combo", 1, 10, 2)
-        desconto_total = st.slider("Desconto Total no Combo (%)", 0, 40, 10) / 100
-        
-        venda_base = preco_venda * unidades_promo
-        venda_com_desconto = venda_base * (1 - desconto_total)
-        custo_combo = custo_prod * unidades_promo
-        
-        # Na Amazon FBA, a taxa de saída pode ser cobrada por unidade ou reduzida em combos
-        res_promo = engine_financeiro(venda_com_desconto / unidades_promo, custo_prod)
-        lucro_combo = res_promo['lucro'] * unidades_promo
-        
-    with c_p2:
-        st.metric("Lucro Total do Combo", f"R$ {lucro_combo:.2f}")
-        st.metric("Margem Líquida do Combo", f"{res_promo['m_liquida']:.1f}%")
-        if res_promo['m_liquida'] < 10:
-            st.warning("Cuidado! Promoção agressiva demais, margem abaixo de 10%.")
-
-# --- TAB 4: SENSIBILIDADE ---
-with tab_sens:
-    st.subheader("📊 Stress Test de Preço")
-    st.write("Veja o impacto de pequenas mudanças no preço final:")
+    base_price = p_venda
+    range_prices = [base_price * (1 + x/100) for x in range(-15, 16, 5)]
     
-    precos_teste = [preco_venda * (1 + x) for x in [-0.2, -0.1, -0.05, 0, 0.05, 0.1, 0.2]]
-    data_sens = []
-    for p in precos_teste:
-        r = engine_financeiro(p, custo_prod)
-        data_sens.append({
-            "Preço": f"R$ {p:.2f}",
-            "Lucro R$": round(r['lucro'], 2),
-            "M. Líquida": f"{r['m_liquida']:.1f}%",
-            "ROI": f"{r['roi']:.1f}%",
-            "Status": "✅ OK" if r['lucro'] > 0 else "❌ Prejuízo"
+    results = []
+    for p in range_prices:
+        d = calcular_cenario(p, c_prod)
+        results.append({
+            "Variação": f"{((p/base_price)-1)*100:+.0f}%",
+            "Preço Venda": round(p, 2),
+            "Lucro Unit": round(d['Lucro Líquido'], 2),
+            "Margem %": round(d['Margem Líquida'], 1),
+            "Lucro Mensal (1k un)": round(d['Lucro Líquido'] * 1000, 2)
         })
-    st.table(pd.DataFrame(data_sens))
+    
+    df_sens = pd.DataFrame(results)
+    st.dataframe(df_sens.style.background_gradient(subset=['Lucro Unit'], cmap='RdYlGn'), use_container_width=True)
+    
+    # Export Button
+    csv = df_sens.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Baixar Relatório em CSV", data=csv, file_name="analise_precificacao.csv", mime="text/csv")
+
+# --- TAB 4: DIAGNÓSTICO IA (Rule Based) ---
+with tab4:
+    st.subheader("🤖 Diagnóstico do Analista Virtual")
+    
+    m_liq = data['Margem Líquida']
+    roi = data['ROI']
+    ads = data['Marketing (Ads)']
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("**Análise de Viabilidade:**")
+        if m_liq < 10:
+            st.error("🔴 **ALTO RISCO:** Sua margem líquida está abaixo de 10%. Qualquer variação no PPC ou devolução pode gerar prejuízo real.")
+        elif m_liq < 18:
+            st.warning("🟡 **ATENÇÃO:** Margem saudável, mas apertada. Monitore o ACOS diariamente.")
+        else:
+            st.success("🟢 **EXCELENTE:** Margem acima de 18%. Produto com gordura para escalar agressivamente no Ads.")
+            
+    with c2:
+        st.markdown("**Recomendação Estratégica:**")
+        if roi < 30:
+            st.write("📉 **ROI Baixo:** Seu capital volta muito devagar. Tente negociar preço com fornecedor ou aumentar o giro.")
+        else:
+            st.write("🚀 **ROI Alto:** Ótimo uso de capital. Reinvista o lucro para evitar ruptura de estoque.")
+            
+        if tacos_target > 0.15 and m_liq < 15:
+            st.write("⚠️ **Alerta de Marketing:** Você está gastando muito em Ads para a margem que tem. Otimize suas campanhas.")
 
 st.divider()
-st.caption(f"Propriedade de {nome_p if nome_p else 'Sua Empresa'}. Dashboard de Auditoria Financeira 2024.")
+st.caption("Amazon FBA Intelligence Suite © 2024 - Modo Profissional Ativado")
