@@ -1,145 +1,152 @@
 import streamlit as st
 import plotly.graph_objects as go
 
-# Configuração da Página
+# Configuração de Layout Premium
 st.set_page_config(
-    page_title="Amazon Profit Master",
-    page_icon="📦",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="Amazon FBA Pro | Intelligence Dashboard",
+    page_icon="📈",
+    layout="wide"
 )
 
-# Estilização Customizada (CSS)
+# Design System (CSS customizado)
 st.markdown("""
     <style>
-    .main {
-        background-color: #f8f9fa;
-    }
-    .stMetric {
+    .main { background-color: #f4f7f9; }
+    [data-testid="stMetricValue"] { font-size: 1.8rem; font-weight: 700; color: #232f3e; }
+    .stTabs [data-baseweb="tab-list"] { gap: 24px; }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
         background-color: #ffffff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border-radius: 8px 8px 0px 0px;
+        gap: 1px;
+        padding-top: 10px;
     }
-    div[data-testid="stSidebarUserContent"] {
-        padding-top: 2rem;
-    }
+    .stTabs [aria-selected="true"] { background-color: #ff9900 !important; color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- SIDEBAR: CONFIGURAÇÕES FIXAS ---
-st.sidebar.header("⚙️ Custos Operacionais")
-st.sidebar.markdown("Configure as taxas padrão da sua conta.")
+# --- SIDEBAR: PARÂMETROS GLOBAIS ---
+with st.sidebar:
+    st.image("https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg", width=120)
+    st.title("Configurações de Conta")
+    
+    with st.expander("📌 Impostos e Taxas", expanded=True):
+        taxa_imposto = st.number_input("Imposto Simples Nacional (%)", 0.0, 25.0, 6.0) / 100
+        comissao_amazon = st.number_input("Comissão da Categoria (%)", 0.0, 25.0, 15.0) / 100
+        taxa_fixa_venda = st.number_input("Taxa Fixa p/ Venda < R$79 (R$)", 0.0, 10.0, 5.0)
 
-taxa_imposto = st.sidebar.slider("Imposto (Simples Nacional %)", 0.0, 20.0, 6.0) / 100
-comissao_amazon = st.sidebar.slider("Comissão da Categoria (%)", 0.0, 25.0, 15.0) / 100
-taxa_fixa_venda = st.sidebar.number_input("Taxa Fixa por Item (R$)", 0.0, 10.0, 2.00)
-frete_fba_fbm = st.sidebar.number_input("Custo de Frete/Coleta (R$)", 0.0, 100.0, 18.00)
+    with st.expander("🚚 Logística FBA", expanded=True):
+        tarifa_processamento_fba = st.number_input("Tarifa de Saída FBA (R$)", 0.0, 150.0, 14.50)
+        custo_frete_inbound = st.number_input("Custo de Envio p/ Centro (R$)", 0.0, 50.0, 1.20)
+        armazenagem_estimada = st.number_input("Armazenagem Mensal (R$)", 0.0, 10.0, 0.50)
 
-st.sidebar.divider()
-st.sidebar.info("Dica: Use estes valores como base para todos os cálculos do dashboard.")
+    st.divider()
+    st.info("Estas taxas são aplicadas em todos os cálculos automáticos das abas ao lado.")
 
-# --- TÍTULO ---
-st.title("📊 Dashboard de Precificação Amazon")
-st.markdown("Ferramenta profissional para análise de margem e ROI.")
-
-# --- ABAS DE FUNCIONALIDADE ---
-tab1, tab2 = st.tabs(["🔄 Calculadora Inversa (Preço Alvo)", "🔍 Simulador de Cenários"])
-
-def calcular_metricas(preco_venda, custo_produto):
-    v_comissao = preco_venda * comissao_amazon
-    v_imposto = preco_venda * taxa_imposto
-    custos_totais = custo_produto + v_comissao + v_imposto + taxa_fixa_venda + frete_fba_fbm
-    lucro_liquido = preco_venda - custos_totais
-    margem = (lucro_liquido / preco_venda) * 100 if preco_venda > 0 else 0
-    roi = (lucro_liquido / custo_produto) * 100 if custo_produto > 0 else 0
+# --- LÓGICA CORE DE FINANÇAS ---
+def calcular_financeiro(venda, custo_compra):
+    v_imposto = venda * taxa_imposto
+    v_comissao = venda * comissao_amazon
+    v_taxa_fixa = taxa_fixa_venda if venda < 79.0 else 0.0
+    
+    custo_total_logistica = tarifa_processamento_fba + custo_frete_inbound + armazenagem_estimada + v_taxa_fixa
+    desembolso_total = custo_compra + v_imposto + v_comissao + custo_total_logistica
+    
+    lucro = venda - desembolso_total
+    margem = (lucro / venda) * 100 if venda > 0 else 0
+    roi = (lucro / custo_compra) * 100 if custo_compra > 0 else 0
+    markup = venda / custo_compra if custo_compra > 0 else 0
+    break_even = desembolso_total - v_imposto - v_comissao # Estimado
     
     return {
-        "lucro": lucro_liquido,
-        "margem": margem,
-        "roi": roi,
-        "v_comissao": v_comissao,
-        "v_imposto": v_imposto,
-        "custos_fixos": taxa_fixa_venda + frete_fba_fbm
+        "lucro": lucro, "margem": margem, "roi": roi, "markup": markup,
+        "v_imposto": v_imposto, "v_comissao": v_comissao, "v_logistica": custo_total_logistica,
+        "custo_produto": custo_compra, "venda": venda
     }
 
-# --- TAB 1: CALCULADORA INVERSA ---
+# --- INTERFACE PRINCIPAL ---
+st.title("🏦 Dashboard de Inteligência de Preço - Amazon FBA")
+st.markdown("Utilize as abas abaixo para diferentes estratégias de precificação.")
+
+tab1, tab2, tab3 = st.tabs(["🔍 Simulador de Cenário", "🔄 Calculadora Reversa", "📊 Tabela de Sensibilidade"])
+
+# TAB 1: SIMULADOR DE CENÁRIO
 with tab1:
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        st.subheader("Inputs")
-        custo_bruto = st.number_input("Custo do Produto (NF-e)", min_value=0.01, value=50.0, key="c1")
-        margem_alvo = st.number_input("Margem Líquida Desejada (%)", min_value=1.0, value=20.0)
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        st.subheader("Entradas")
+        custo_in = st.number_input("Custo de Compra (NF-e)", 0.01, 5000.0, 50.0, key="t1_c")
+        venda_in = st.number_input("Preço de Venda Pretendido", 0.01, 10000.0, 149.90, key="t1_v")
         
-        # Cálculo de Markup Reverso: Preço = (Custos Fixos + Custo Produto) / (1 - %Imposto - %Comissão - %MargemAlvo)
-        denominador = (1 - taxa_imposto - comissao_amazon - (margem_alvo/100))
+        dados = calcular_financeiro(venda_in, custo_in)
         
-        if denominador <= 0:
-            st.error("A margem desejada é matematicamente impossível com essas taxas.")
-            preco_sugerido = 0.0
-        else:
-            preco_sugerido = (custo_bruto + taxa_fixa_venda + frete_fba_fbm) / denominador
+    with c2:
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Lucro Líquido", f"R$ {dados['lucro']:.2f}")
+        m2.metric("Margem Líquida", f"{dados['margem']:.1f}%")
+        m3.metric("ROI", f"{dados['roi']:.1f}%")
+        
+        # Gráfico de composição
+        fig = go.Figure(data=[go.Pie(
+            labels=['Produto', 'Impostos', 'Comissão', 'Logística FBA', 'Lucro'],
+            values=[dados['custo_produto'], dados['v_imposto'], dados['v_comissao'], dados['v_logistica'], max(0, dados['lucro'])],
+            hole=.4,
+            marker_colors=['#BDC3C7', '#34495E', '#FF9900', '#2C3E50', '#27AE60']
+        )])
+        fig.update_layout(title="Distribuição do Preço de Venda")
+        st.plotly_chart(fig, use_container_width=True)
 
-    if preco_sugerido > 0:
-        res = calcular_metricas(preco_sugerido, custo_bruto)
-        
-        with col2:
-            st.subheader("Resultado da Estratégia")
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Preço Sugerido", f"R$ {preco_sugerido:.2f}")
-            m2.metric("Lucro Líquido", f"R$ {res['lucro']:.2f}")
-            m3.metric("ROI", f"{res['roi']:.1f}%")
-            
-            # Gráfico de Pizza
-            fig = go.Figure(data=[go.Pie(
-                labels=['Custo Produto', 'Comissão Amazon', 'Imposto', 'Logística/Taxas', 'Lucro Líquido'],
-                values=[custo_bruto, res['v_comissao'], res['v_imposto'], res['custos_fixos'], res['lucro']],
-                hole=.4,
-                marker_colors=['#E5E5E5', '#FF9900', '#34495E', '#BDC3C7', '#2ECC71']
-            )])
-            fig.update_layout(title_text="Composição do Preço de Venda")
-            st.plotly_chart(fig, use_container_width=True)
-
-# --- TAB 2: SIMULADOR DE CENÁRIOS ---
+# TAB 2: CALCULADORA REVERSA
 with tab2:
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        st.subheader("Simular Venda")
-        custo_sim = st.number_input("Custo do Produto (NF-e)", min_value=0.01, value=50.0, key="c2")
-        preco_sim = st.number_input("Preço de Venda Pretendido", min_value=0.01, value=120.0)
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        st.subheader("Qual sua meta?")
+        custo_rev = st.number_input("Custo de Compra (NF-e)", 0.01, 5000.0, 50.0, key="t2_c")
+        margem_desejada = st.slider("Margem Líquida Alvo (%)", 5, 50, 20)
         
-        res_sim = calcular_metricas(preco_sim, custo_sim)
-
-    with col2:
-        st.subheader("Análise de Viabilidade")
-        s1, s2, s3 = st.columns(3)
-        
-        cor_lucro = "normal" if res_sim['lucro'] > 0 else "inverse"
-        s1.metric("Lucro Líquido", f"R$ {res_sim['lucro']:.2f}", delta=f"{res_sim['margem']:.1f}% Margem")
-        s2.metric("ROI", f"{res_sim['roi']:.1f}%")
-        s3.metric("Break-even (Custo Total)", f"R$ {(preco_sim - res_sim['lucro']):.2f}")
-        
-        if res_sim['lucro'] < 0:
-            st.error("⚠️ Este cenário resulta em PREJUÍZO.")
-        elif res_sim['margem'] < 10:
-            st.warning("⚠️ Margem muito baixa para a operação Amazon (risco de variação de frete).")
+        # Fórmula: Venda = (CustoFixoLogistica + CustoProduto) / (1 - %Imp - %Comis - %MargemAlvo)
+        # Consideramos venda > 79 para simplificar o cálculo inicial da reversa
+        denominador = (1 - taxa_imposto - comissao_amazon - (margem_desejada/100))
+        if denominador > 0:
+            preco_alvo = (custo_rev + tarifa_processamento_fba + custo_frete_inbound + armazenagem_estimada) / denominador
         else:
-            st.success("✅ Cenário lucrativo e saudável.")
+            preco_alvo = 0
+            
+    with c2:
+        if preco_alvo > 0:
+            st.success(f"### Preço Sugerido: R$ {preco_alvo:.2f}")
+            res_rev = calcular_financeiro(preco_alvo, custo_rev)
+            
+            k1, k2, k3 = st.columns(3)
+            k1.info(f"Markup: {res_rev['markup']:.2f}x")
+            k2.info(f"Imposto: R$ {res_rev['v_imposto']:.2f}")
+            k3.info(f"Comissão: R$ {res_rev['v_comissao']:.2f}")
+            
+            st.warning(f"Se você vender a **R$ {preco_alvo:.2f}**, sobrará **R$ {res_rev['lucro']:.2f}** por unidade após todas as taxas.")
+        else:
+            st.error("A meta de margem é impossível com as taxas atuais.")
 
-        # Detalhamento em Tabela
-        st.markdown("---")
-        st.write("**Detalhamento de Saídas (R$):**")
-        st.json({
-            "Preço de Venda": round(preco_sim, 2),
-            "(-) Custo de Aquisição": round(custo_sim, 2),
-            "(-) Comissão Amazon": round(res_sim['v_comissao'], 2),
-            "(-) Imposto": round(res_sim['v_imposto'], 2),
-            "(-) Frete/Taxa Fixa": round(res_sim['custos_fixos'], 2),
-            "(=) Resultado Final": round(res_sim['lucro'], 2)
-        })
+# TAB 3: TABELA DE SENSIBILIDADE
+with tab3:
+    st.subheader("Análise de Elasticidade")
+    st.markdown("Como pequenos descontos afetam seu lucro final?")
+    
+    custo_sens = st.number_input("Custo do Produto", 0.01, 5000.0, 50.0, key="t3_c")
+    venda_ref = st.number_input("Preço de Referência", 0.01, 10000.0, 150.0, key="t3_v")
+    
+    variacoes = [-0.15, -0.10, -0.05, 0, 0.05, 0.10, 0.15]
+    
+    st.markdown("---")
+    cols_sens = st.columns(len(variacoes))
+    
+    for i, var in enumerate(variacoes):
+        p_var = venda_ref * (1 + var)
+        d_var = calcular_financeiro(p_var, custo_sens)
+        with cols_sens[i]:
+            cor = "normal" if var == 0 else "inverse" if var < 0 else "normal"
+            st.metric(f"{var*100:+.0f}%", f"R$ {p_var:.0f}", delta=f"L: R${d_var['lucro']:.1f}", delta_color=cor)
+            st.caption(f"Margem: {d_var['margem']:.1f}%")
 
-# Rodapé
 st.divider()
-st.caption(f"App desenvolvido para uso exclusivo de Sócios. Versão 1.0 - Amazon Brasil.")
+st.caption("🔒 Amazon FBA Intelligence - Desenvolvido para decisão estratégica entre sócios.")
