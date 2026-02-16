@@ -122,21 +122,27 @@ with tab_sim:
 
         # Gráfico Avançado
         fig = go.Figure()
+        # CORREÇÃO AQUI: Removido o argumento 'name' duplicado
         fig.add_trace(go.Bar(
-            name='Composição de Custos',
             y=['Financeiro'],
-            x=[dados['custo']], orientation='h', name="Custo Produto", marker_color='#cbd5e1'
+            x=[dados['custo']], 
+            orientation='h', 
+            name="Custo Produto", 
+            marker_color='#cbd5e1'
         ))
         fig.add_trace(go.Bar(
             name='Amazon + Gov',
             y=['Financeiro'],
             x=[dados['imposto_val'] + dados['comissao_val'] + dados['logistica_val']], 
-            orientation='h', marker_color='#232f3e'
+            orientation='h', 
+            marker_color='#232f3e'
         ))
         fig.add_trace(go.Bar(
             name='Lucro Real',
             y=['Financeiro'],
-            x=[max(0, dados['lucro'])], orientation='h', marker_color='#ff9900'
+            x=[max(0, dados['lucro'])], 
+            orientation='h', 
+            marker_color='#ff9900'
         ))
         fig.update_layout(barmode='stack', height=250, margin=dict(t=30, b=20), title="Visão de Fluxo por Venda")
         st.plotly_chart(fig, use_container_width=True)
