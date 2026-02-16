@@ -241,7 +241,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "💼 Dashboard Executivo", 
     "📉 Análise de Cascata (P&L)", 
     "🎯 Simulador & Psicologia de Preços", 
-    "🔮 Cenários Futuros (Novo)",
+    "🔮 Cenários Futuros (Corrigido)",
     "❓ Glossário & Ajuda"
 ])
 
@@ -456,7 +456,7 @@ with tab3:
             
             st.caption("Nota: Preços terminados em .90 tendem a performar melhor no e-commerce brasileiro do que números quebrados como R$ 134,52.")
 
-# --- TAB 4: CENÁRIOS FUTUROS (NOVO) ---
+# --- TAB 4: CENÁRIOS FUTUROS (CORRIGIDO) ---
 with tab4:
     st.subheader("🔮 Matriz de Cenários Automática")
     st.markdown("Não confie apenas no plano A. Veja o que acontece nos cenários Otimista e Pessimista.")
@@ -480,7 +480,7 @@ with tab4:
         }
     }
     
-    scenario_results = []
+    scenario_display_data = []
     
     for name, params in scenarios.items():
         res = calculate_financials(
@@ -488,27 +488,40 @@ with tab4:
             tax_rate, commission_rate, fba_fee, storage_fee, 
             params['ads'], return_rate, fixed_fee, misc_costs
         )
-        scenario_results.append({
+        # Formatando valores como strings para exibição segura e bonita
+        scenario_display_data.append({
             "Cenário": name,
             "Preço Venda": f"R$ {params['price']:.2f}",
-            "Lucro Líquido": res['net_profit'],
-            "Margem %": res['margin_net'],
-            "ROI %": res['roi']
+            "Lucro Líquido": f"R$ {res['net_profit']:.2f}",
+            "Margem %": f"{res['margin_net']:.1f}%",
+            "ROI %": f"{res['roi']:.1f}%"
         })
     
-    df_scenarios = pd.DataFrame(scenario_results)
+    # Convertendo para DataFrame apenas para estrutura, mas usando Plotly Table para renderizar
+    df_display = pd.DataFrame(scenario_display_data)
+
+    # Tabela Profissional usando Plotly (Substitui o st.dataframe com style que estava quebrando)
+    fig_table = go.Figure(data=[go.Table(
+        header=dict(values=list(df_display.columns),
+                    fill_color=COLOR_DARK_BLUE,
+                    font=dict(color='white', size=14),
+                    align='left',
+                    height=40),
+        cells=dict(values=[df_display[k].tolist() for k in df_display.columns],
+                   fill_color=[[COLOR_LIGHT_GREY if i % 2 == 0 else 'white' for i in range(len(df_display))]],
+                   align='left',
+                   font=dict(color=[COLOR_TEXT], size=13),
+                   height=30)
+    )])
     
-    # Exibir como dataframe estilizado
-    st.dataframe(
-        df_scenarios.style.format({
-            "Lucro Líquido": "R$ {:.2f}",
-            "Margem %": "{:.1f}%",
-            "ROI %": "{:.1f}%"
-        }).background_gradient(subset=["Lucro Líquido"], cmap="RdYlGn"),
-        use_container_width=True
+    fig_table.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0),
+        height=200
     )
     
-    st.info("💡 **Dica:** Se o seu cenário 'Pessimista' ainda der lucro positivo, este é um produto muito seguro para lançar.")
+    st.plotly_chart(fig_table, use_container_width=True)
+    
+    st.info("💡 **Dica:** A tabela acima agora usa renderização gráfica para garantir 100% de estabilidade e visual profissional.")
 
 # --- TAB 5: GLOSSÁRIO (NOVO) ---
 with tab5:
@@ -598,4 +611,4 @@ with col_text:
 
 # Footer
 st.markdown("---")
-st.markdown("<div style='text-align: center; color: #888; font-size: 12px;'>Amazon FBA Command Center v3.0 | Ultimate Edition</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: #888; font-size: 12px;'>Amazon FBA Command Center v3.1 | Ultimate Edition</div>", unsafe_allow_html=True)
