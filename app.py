@@ -21,6 +21,7 @@ COLOR_LIGHT_GREY = "#f0f2f6"
 COLOR_SUCCESS = "#2ecc71"
 COLOR_DANGER = "#e74c3c"
 COLOR_WARNING = "#f1c40f"
+COLOR_TEXT = "#111111"
 
 # Custom CSS para Estética "Wall Street" / Amazon
 st.markdown(f"""
@@ -39,8 +40,12 @@ st.markdown(f"""
         background-color: {COLOR_LIGHT_GREY};
         border-left: 5px solid {COLOR_ORANGE};
         padding: 15px;
-        border-radius: 5px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }}
+    .metric-card:hover {{
+        transform: translateY(-2px);
     }}
     .stTabs [data-baseweb="tab-list"] {{
         gap: 2px;
@@ -58,6 +63,11 @@ st.markdown(f"""
         background-color: {COLOR_DARK_BLUE};
         color: white;
     }}
+    
+    /* Tooltip Customization via info icons */
+    .stTooltipIcon {{
+        color: {COLOR_ORANGE};
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -68,36 +78,91 @@ with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg", width=150)
     st.markdown("### ⚙️ Parâmetros do Produto")
     
-    product_name = st.text_input("Nome do Produto", "Fone Bluetooth Pro X")
+    product_name = st.text_input("Nome do Produto", "Fone Bluetooth Pro X", help="Nome interno para identificação no relatório.")
     
     st.markdown("---")
     st.markdown("#### 💰 Precificação e Receita")
-    price_sale = st.number_input("Preço de Venda (Buybox) R$", min_value=0.0, value=129.90, step=1.0)
+    price_sale = st.number_input(
+        "Preço de Venda (Buybox) R$", 
+        min_value=0.0, value=129.90, step=1.0, format="%.2f",
+        help="O preço final que o cliente paga na Amazon. É a base para cálculo de todas as taxas percentuais."
+    )
     
     st.markdown("#### 📦 Custos do Produto (CMV)")
-    cost_product = st.number_input("Custo Unitário (Fornecedor) R$", min_value=0.0, value=35.00, step=0.5)
-    cost_inbound = st.number_input("Frete Inbound (Unitário) R$", min_value=0.0, value=1.50, step=0.1, help="Custo para enviar do fornecedor até o CD Amazon")
-    cost_prep = st.number_input("Embalagem/Prep (Unitário) R$", min_value=0.0, value=1.00, step=0.1)
+    cost_product = st.number_input(
+        "Custo Unitário (Fornecedor) R$", 
+        min_value=0.0, value=35.00, step=0.5, format="%.2f",
+        help="Quanto você paga por unidade para o fabricante/fornecedor."
+    )
+    cost_inbound = st.number_input(
+        "Frete Inbound (Unitário) R$", 
+        min_value=0.0, value=1.50, step=0.1, format="%.2f",
+        help="Custo rateado para enviar o produto do fornecedor (ou sua casa) até o Centro de Distribuição (CD) da Amazon."
+    )
+    cost_prep = st.number_input(
+        "Embalagem/Prep (Unitário) R$", 
+        min_value=0.0, value=1.00, step=0.1, format="%.2f",
+        help="Custo de etiquetas, polybags, caixas de envio ou serviço de preparação terceirizado."
+    )
     
     st.markdown("#### 🏦 Taxas e Impostos")
-    tax_rate = st.slider("Imposto (Simples/Presumido) %", 0.0, 30.0, 6.0, step=0.5) / 100
-    commission_rate = st.slider("Comissão Amazon (Referral) %", 0.0, 30.0, 16.0, step=0.5) / 100
+    tax_rate_input = st.slider(
+        "Imposto (Simples/Presumido) %", 
+        0.0, 30.0, 6.0, step=0.5,
+        help="Alíquota efetiva de imposto sobre a nota fiscal de venda (DAS). Consulte seu contador."
+    )
+    tax_rate = tax_rate_input / 100
+    
+    commission_rate_input = st.slider(
+        "Comissão Amazon (Referral) %", 
+        0.0, 30.0, 16.0, step=0.5,
+        help="Taxa de referência da categoria (geralmente entre 12% e 16% + impostos sobre comissão se aplicável)."
+    )
+    commission_rate = commission_rate_input / 100
     
     st.markdown("#### 🚚 Logística FBA")
-    fba_fee = st.number_input("Tarifa de Saída FBA (Peso/Dim) R$", min_value=0.0, value=14.50, step=0.5)
-    storage_fee = st.number_input("Armazenagem Mensal Est. R$", min_value=0.0, value=0.50, step=0.1)
+    fba_fee = st.number_input(
+        "Tarifa de Saída FBA (Peso/Dim) R$", 
+        min_value=0.0, value=14.50, step=0.5, format="%.2f",
+        help="Taxa fixa cobrada pela Amazon para pegar (pick), embalar (pack) e enviar (ship) o produto ao cliente. Baseado no peso e dimensões."
+    )
+    storage_fee = st.number_input(
+        "Armazenagem Mensal Est. R$", 
+        min_value=0.0, value=0.50, step=0.1, format="%.2f",
+        help="Custo estimado de ocupação de espaço no CD. Aumenta no Q4 (out/nov/dez)."
+    )
     
     st.markdown("#### 📉 Marketing e Riscos")
-    tacos_target = st.slider("TACOS Alvo (Ads Total) %", 0.0, 50.0, 10.0, step=1.0, help="Total Advertising Cost of Sales: Gasto total de Ads dividido pela receita total") / 100
-    return_rate = st.slider("Taxa de Devolução Estimada %", 0.0, 20.0, 3.0, step=0.5, help="Porcentagem de vendas que retornam e geram perdas") / 100
+    tacos_target_input = st.slider(
+        "TACOS Alvo (Ads Total) %", 
+        0.0, 50.0, 10.0, step=1.0,
+        help="Total Advertising Cost of Sales. É o quanto do faturamento total você aceita gastar em anúncios (PPC) para manter as vendas girando."
+    )
+    tacos_target = tacos_target_input / 100
+    
+    return_rate_input = st.slider(
+        "Taxa de Devolução Estimada %", 
+        0.0, 20.0, 3.0, step=0.5,
+        help="Porcentagem de vendas que retornam. O custo é calculado estimando a perda das taxas de envio e danos ao produto."
+    )
+    return_rate = return_rate_input / 100
 
     # Lógica de Taxa Fixa (Regra < R$79)
     is_low_price = price_sale < 79.00
     fixed_fee_default = 5.00 if is_low_price else 0.00
     
-    with st.expander("Configurações Avançadas de Taxas"):
-        fixed_fee = st.number_input("Taxa Fixa (Regra < R$79)", value=fixed_fee_default)
-        misc_costs = st.number_input("Outros Custos Variáveis R$", value=0.0)
+    with st.expander("🛠️ Configurações Avançadas de Taxas"):
+        st.caption("Ajuste fino para custos ocultos.")
+        fixed_fee = st.number_input(
+            "Taxa Fixa (Regra < R$79)", 
+            value=fixed_fee_default,
+            help="Taxa administrativa extra que a Amazon cobra para itens abaixo de R$79,00."
+        )
+        misc_costs = st.number_input(
+            "Outros Custos Variáveis R$", 
+            value=0.0,
+            help="Custos extras como adesivagem extra ou brindes inclusos."
+        )
 
 # -----------------------------------------------------------------------------
 # 3. NÚCLEO LÓGICO (CALCULATION ENGINE)
@@ -133,7 +198,12 @@ def calculate_financials(p_sale, p_cost, p_inbound, p_prep, p_tax, p_comm, p_fba
     roi = net_profit / cogs_total if cogs_total > 0 else 0 # ROI sobre investimento no produto
     markup = (p_sale / cogs_total) if cogs_total > 0 else 0
     
-    break_even = (cogs_total + val_fixed + val_fba + val_storage + p_misc) / (1 - p_tax - p_comm - p_tacos - p_return)
+    # Break-even Point calculation
+    # Fixed costs here refer to per-unit fixed values (FBA, Product Cost, Fixed Fee, Misc)
+    # Variable costs here refer to percentages (Tax, Comm, Tacos, Return)
+    # Price * (1 - Variable%) = FixedPerUnit
+    denominator = (1 - p_tax - p_comm - p_tacos - p_return)
+    break_even = (cogs_total + val_fixed + val_fba + val_storage + p_misc) / denominator if denominator > 0 else 999999
 
     return {
         "gross_revenue": gross_revenue,
@@ -150,7 +220,8 @@ def calculate_financials(p_sale, p_cost, p_inbound, p_prep, p_tax, p_comm, p_fba
         "net_profit": net_profit,
         "margin_net": margin_net * 100,
         "roi": roi * 100,
-        "break_even": break_even
+        "break_even": break_even,
+        "markup": markup
     }
 
 metrics = calculate_financials(
@@ -163,10 +234,16 @@ metrics = calculate_financials(
 # -----------------------------------------------------------------------------
 
 st.title(f"📊 FBA Command Center: {product_name}")
-st.markdown(f"**Análise Financeira de Precisão** | Status: {'🟢 Lucrativo' if metrics['net_profit'] > 0 else '🔴 Prejuízo'}")
+st.markdown(f"**Análise Financeira de Precisão** | Status: {'🟢 **LUCRATIVO**' if metrics['net_profit'] > 0 else '🔴 **PREJUÍZO**'}")
 
 # --- TABS ---
-tab1, tab2, tab3, tab4 = st.tabs(["💼 Dashboard Executivo", "📉 Análise de Cascata (P&L)", "🎯 Simulação Reversa", "🤖 Diagnóstico IA"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "💼 Dashboard Executivo", 
+    "📉 Análise de Cascata (P&L)", 
+    "🎯 Simulador & Psicologia de Preços", 
+    "🔮 Cenários Futuros (Novo)",
+    "❓ Glossário & Ajuda"
+])
 
 # --- TAB 1: DASHBOARD EXECUTIVO ---
 with tab1:
@@ -174,13 +251,31 @@ with tab1:
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("Lucro Líquido Unitário", f"R$ {metrics['net_profit']:.2f}", delta_color="normal")
+        st.metric(
+            "Lucro Líquido Unitário", 
+            f"R$ {metrics['net_profit']:.2f}", 
+            delta_color="normal",
+            help="O que sobra limpo no seu bolso após pagar TUDO (Produto, Amazon, Imposto, Ads)."
+        )
     with col2:
-        st.metric("Margem Líquida Real", f"{metrics['margin_net']:.2f}%", delta=f"{metrics['margin_net'] - 15:.1f}pp vs Meta" if metrics['margin_net'] < 15 else None)
+        st.metric(
+            "Margem Líquida Real", 
+            f"{metrics['margin_net']:.2f}%", 
+            delta=f"{metrics['margin_net'] - 15:.1f}pp vs Meta (15%)" if metrics['margin_net'] < 15 else None,
+            help="A porcentagem do preço de venda que vira lucro. Abaixo de 15% é considerado arriscado para Private Label."
+        )
     with col3:
-        st.metric("ROI (Retorno s/ Invest.)", f"{metrics['roi']:.2f}%", help="Quanto volta para o bolso para cada R$1 gasto em estoque")
+        st.metric(
+            "ROI (Retorno s/ Invest.)", 
+            f"{metrics['roi']:.2f}%", 
+            help="Para cada R$1,00 que você gasta comprando estoque, quanto volta de lucro? Ideal > 30%."
+        )
     with col4:
-        st.metric("Ponto de Equilíbrio (Break-even)", f"R$ {metrics['break_even']:.2f}", help="Preço mínimo de venda para não perder dinheiro")
+        st.metric(
+            "Break-even (Ponto de Equilíbrio)", 
+            f"R$ {metrics['break_even']:.2f}", 
+            help="O preço MÍNIMO que você pode vender para ficar no zero a zero (nem lucro, nem prejuízo)."
+        )
 
     st.markdown("---")
     
@@ -188,8 +283,8 @@ with tab1:
     c_chart1, c_chart2 = st.columns([2, 1])
     
     with c_chart1:
-        st.subheader("Composição de Custos")
-        # Donut Chart
+        st.subheader("Para onde vai o dinheiro?")
+        # Donut Chart with better colors
         labels = ['CMV (Produto+Frete)', 'Comissão Amazon', 'Logística FBA', 'Impostos', 'Marketing (Ads)', 'Outros (Dev/Arm)']
         values = [
             metrics['cogs_total'], 
@@ -199,44 +294,68 @@ with tab1:
             metrics['val_ads'], 
             metrics['val_returns'] + metrics['val_storage'] + metrics['val_misc']
         ]
+        colors = ['#2c3e50', '#f39c12', '#e67e22', '#e74c3c', '#3498db', '#95a5a6']
         
-        fig_donut = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.5)])
-        fig_donut.update_layout(margin=dict(t=20, b=20, l=20, r=20), height=350)
-        fig_donut.update_traces(textposition='inside', textinfo='percent+label')
+        fig_donut = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.6, marker=dict(colors=colors))])
+        fig_donut.update_layout(
+            margin=dict(t=20, b=20, l=20, r=20), 
+            height=350,
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="bottom", y=-0.1, xanchor="center", x=0.5)
+        )
+        fig_donut.update_traces(textposition='outside', textinfo='percent+label')
         st.plotly_chart(fig_donut, use_container_width=True)
         
     with c_chart2:
-        st.subheader("KPIs Rápidos")
+        st.subheader("Projeção de Lote")
+        
+        lote_qty = st.number_input("Tamanho do Lote (unidades)", value=100, step=50)
+        
+        total_inv = metrics['cogs_total'] * lote_qty
+        total_profit = metrics['net_profit'] * lote_qty
+        total_rev = metrics['gross_revenue'] * lote_qty
+        
         st.markdown(f"""
         <div class="metric-card">
-            <b>Custo Total (Unit):</b><br>
-            <span style="font-size: 24px;">R$ {metrics['total_costs']:.2f}</span>
+            <small>Investimento em Estoque</small><br>
+            <span style="font-size: 20px; font-weight: bold;">R$ {total_inv:,.2f}</span>
         </div>
         <div style="height: 10px;"></div>
         <div class="metric-card">
-            <b>Faturamento (100 unids):</b><br>
-            <span style="font-size: 24px;">R$ {metrics['gross_revenue'] * 100:.2f}</span>
+            <small>Faturamento Estimado</small><br>
+            <span style="font-size: 20px; font-weight: bold;">R$ {total_rev:,.2f}</span>
         </div>
         <div style="height: 10px;"></div>
-        <div class="metric-card">
-            <b>Lucro Est. (100 unids):</b><br>
-            <span style="font-size: 24px; color: {COLOR_SUCCESS if metrics['net_profit'] > 0 else COLOR_DANGER};">R$ {metrics['net_profit'] * 100:.2f}</span>
+        <div class="metric-card" style="border-left: 5px solid {COLOR_SUCCESS if total_profit > 0 else COLOR_DANGER};">
+            <small>Lucro Líquido do Lote</small><br>
+            <span style="font-size: 24px; font-weight: bold; color: {COLOR_SUCCESS if total_profit > 0 else COLOR_DANGER};">
+                R$ {total_profit:,.2f}
+            </span>
         </div>
         """, unsafe_allow_html=True)
+        
+        # Add Export Button
+        csv_data = pd.DataFrame([metrics]).to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Baixar Relatório CSV",
+            data=csv_data,
+            file_name=f'fba_analise_{product_name.replace(" ","_")}.csv',
+            mime='text/csv',
+        )
 
 # --- TAB 2: WATERFALL (CASCATA) ---
 with tab2:
     st.subheader("Fluxo de Erosão do Lucro (Waterfall)")
-    st.caption("Entenda exatamente onde cada centavo da venda é consumido.")
+    st.markdown("Este gráfico mostra **exatamente** em qual etapa você está perdendo margem. Ideal para identificar gargalos.")
     
     fig_waterfall = go.Figure(go.Waterfall(
         name = "20", orientation = "v",
         measure = ["relative", "relative", "relative", "relative", "relative", "relative", "relative", "relative", "total"],
-        x = ["Preço Venda", "Impostos", "Comissão Amazon", "Taxa FBA", "CMV (Produto)", "Ads (TACOS)", "Armazenagem", "Devoluções/Perdas", "LUCRO LÍQUIDO"],
+        x = ["Preço Venda", "Impostos", "Comissão Amazon", "Taxa FBA", "CMV (Produto)", "Ads (TACOS)", "Armazenagem", "Perdas/Dev", "LUCRO LÍQUIDO"],
         textposition = "outside",
-        text = [f"R$ {metrics['gross_revenue']:.2f}", f"-{metrics['val_tax']:.2f}", f"-{metrics['val_comm']+metrics['val_fixed']:.2f}", 
+        text = [f"R${metrics['gross_revenue']:.2f}", f"-{metrics['val_tax']:.2f}", f"-{metrics['val_comm']+metrics['val_fixed']:.2f}", 
                 f"-{metrics['val_fba']:.2f}", f"-{metrics['cogs_total']:.2f}", f"-{metrics['val_ads']:.2f}", 
-                f"-{metrics['val_storage']:.2f}", f"-{metrics['val_returns']:.2f}", f"R$ {metrics['net_profit']:.2f}"],
+                f"-{metrics['val_storage']:.2f}", f"-{metrics['val_returns']:.2f}", f"R${metrics['net_profit']:.2f}"],
         y = [metrics['gross_revenue'], -metrics['val_tax'], -(metrics['val_comm']+metrics['val_fixed']), 
              -metrics['val_fba'], -metrics['cogs_total'], -metrics['val_ads'], 
              -metrics['val_storage'], -metrics['val_returns'], metrics['net_profit']],
@@ -247,30 +366,22 @@ with tab2:
     ))
     
     fig_waterfall.update_layout(
-        title = "Demonstrativo de Resultado Unitário (DRE)",
+        title = "DRE Visual (Cascata)",
         showlegend = False,
-        height=500,
+        height=550,
         waterfallgap = 0.3
     )
     st.plotly_chart(fig_waterfall, use_container_width=True)
 
-# --- TAB 3: SIMULAÇÃO REVERSA & SENSIBILIDADE ---
+# --- TAB 3: SIMULAÇÃO REVERSA & PSICOLOGIA ---
 with tab3:
-    col_rev, col_sens = st.columns([1, 1])
+    col_rev, col_psy = st.columns([1, 1])
     
     with col_rev:
         st.markdown("### 🎯 Calculadora Reversa")
-        st.info("Defina quanto você quer ganhar, e nós diremos o preço de venda.")
+        st.info("Digite quanto você quer de margem, e o sistema calcula o preço de venda necessário.")
         
-        target_margin_percent = st.number_input("Margem Líquida Alvo (%)", min_value=1.0, max_value=50.0, value=20.0, step=1.0)
-        
-        # Reverse Logic formula derived from: NetProfit = Price * (1 - VariableRates) - FixedCosts
-        # Variable Rates = Tax + Comm + Ads + Returns
-        # Fixed Costs = COGS + FBA + FixedFee + Storage + Misc
-        # TargetNet = Price * Target%
-        # Price * Target% = Price * (1 - Vars) - Fixed
-        # Price * (1 - Vars - Target%) = Fixed
-        # Price = Fixed / (1 - Vars - Target%)
+        target_margin_percent = st.number_input("Margem Líquida Alvo (%)", min_value=1.0, max_value=60.0, value=20.0, step=1.0)
         
         var_rates = tax_rate + commission_rate + tacos_target + return_rate
         total_fixed_costs = cost_product + cost_inbound + cost_prep + fba_fee + fixed_fee + storage_fee + misc_costs
@@ -278,114 +389,213 @@ with tab3:
         denominator = 1 - var_rates - (target_margin_percent/100)
         
         if denominator <= 0:
-            st.error("Impossível atingir essa margem com os custos variáveis atuais! A soma das taxas percentuais excede o limite.")
+            st.error("⚠️ Impossível! Seus custos variáveis (Imposto + Amazon + Ads) já são maiores que o que sobra para a margem.")
         else:
             suggested_price = total_fixed_costs / denominator
             st.markdown(f"""
-            <div style="background-color: #e8f4f8; padding: 20px; border-radius: 10px; text-align: center;">
-                <span style="font-size: 16px; color: #555;">Para lucrar {target_margin_percent}% líquido:</span><br>
-                <span style="font-size: 36px; font-weight: bold; color: {COLOR_DARK_BLUE};">R$ {suggested_price:.2f}</span>
+            <div style="background-color: #e8f4f8; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #b3d7e8;">
+                <span style="font-size: 14px; color: #555; text-transform: uppercase; letter-spacing: 1px;">Preço Matemático</span><br>
+                <span style="font-size: 32px; font-weight: bold; color: {COLOR_DARK_BLUE};">R$ {suggested_price:.2f}</span>
             </div>
             """, unsafe_allow_html=True)
             
-            # Validação rápida
-            new_profit = suggested_price * (target_margin_percent/100)
-            st.write(f"Isso geraria um lucro unitário de **R$ {new_profit:.2f}**")
+            new_profit_check = suggested_price * (target_margin_percent/100)
+            st.caption(f"Lucro projetado nesse preço: R$ {new_profit_check:.2f}")
 
-    with col_sens:
-        st.markdown("### 🔥 Teste de Estresse (Sensibilidade)")
-        st.caption("Como o lucro se comporta se o preço ou o custo do fornecedor mudar?")
+    with col_psy:
+        st.markdown("### 🧠 Psicologia de Preços (Novo)")
+        st.markdown("Preços matemáticos vendem menos. Use preços psicológicos para aumentar a conversão.")
         
-        # Sensitivity Matrix Logic
-        prices = np.linspace(price_sale * 0.8, price_sale * 1.2, 5)
-        costs = np.linspace(cost_product * 0.8, cost_product * 1.2, 5)
-        
-        z_data = []
-        y_labels = [f"Custo: {c:.2f}" for c in costs]
-        x_labels = [f"Preço: {p:.2f}" for p in prices]
-        
-        for c in costs:
-            row = []
-            for p in prices:
-                # Recalcula simplified
-                res = calculate_financials(p, c, cost_inbound, cost_prep, tax_rate, commission_rate, fba_fee, storage_fee, tacos_target, return_rate, fixed_fee, misc_costs)
-                row.append(res['net_profit'])
-            z_data.append(row)
+        if denominator > 0:
+            base_price = int(suggested_price)
             
-        fig_heat = go.Figure(data=go.Heatmap(
-            z=z_data,
-            x=x_labels,
-            y=y_labels,
-            colorscale='RdBu',
-            texttemplate="R$ %{z:.2f}",
-            zmid=0
-        ))
-        fig_heat.update_layout(title="Matriz de Lucro Líquido (R$)", height=400)
-        st.plotly_chart(fig_heat, use_container_width=True)
+            # Opções Psicológicas
+            opt_90 = float(base_price) + 0.90
+            if opt_90 < suggested_price: opt_90 += 1.0 # Ensure we don't drop too much
+            
+            opt_99 = float(base_price) + 0.99
+            if opt_99 < suggested_price: opt_99 += 1.0
+            
+            opt_97 = float(base_price) + 0.97
+            
+            # Recalcular lucro para essas opções
+            def quick_calc_profit(p):
+                res = calculate_financials(p, cost_product, cost_inbound, cost_prep, tax_rate, commission_rate, fba_fee, storage_fee, tacos_target, return_rate, fixed_fee, misc_costs)
+                return res['net_profit'], res['margin_net']
 
-# --- TAB 4: DIAGNÓSTICO IA ---
+            p90, m90 = quick_calc_profit(opt_90)
+            p99, m99 = quick_calc_profit(opt_99)
+            
+            st.markdown("**Sugestões Inteligentes:**")
+            
+            # Card 1
+            st.markdown(f"""
+            <div class="metric-card" style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <span style="font-size: 22px; font-weight: bold;">R$ {opt_90:.2f}</span> <span style="color: #666; font-size: 12px;">(Padrão Brasileiro)</span>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 14px; color: {COLOR_SUCCESS if m90 >= target_margin_percent else COLOR_DANGER}">Margem: {m90:.1f}%</span><br>
+                    <small>Lucro: R$ {p90:.2f}</small>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Card 2
+            st.markdown(f"""
+            <div class="metric-card" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <span style="font-size: 22px; font-weight: bold;">R$ {opt_99:.2f}</span> <span style="color: #666; font-size: 12px;">(Agressivo)</span>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 14px; color: {COLOR_SUCCESS if m99 >= target_margin_percent else COLOR_DANGER}">Margem: {m99:.1f}%</span><br>
+                    <small>Lucro: R$ {p99:.2f}</small>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.caption("Nota: Preços terminados em .90 tendem a performar melhor no e-commerce brasileiro do que números quebrados como R$ 134,52.")
+
+# --- TAB 4: CENÁRIOS FUTUROS (NOVO) ---
 with tab4:
-    st.subheader("🤖 FBA Analyst AI - Diagnóstico")
+    st.subheader("🔮 Matriz de Cenários Automática")
+    st.markdown("Não confie apenas no plano A. Veja o que acontece nos cenários Otimista e Pessimista.")
     
-    col_kpi, col_advice = st.columns([1, 2])
+    # Definição dos Cenários
+    scenarios = {
+        "Pessimista 🌧️": {
+            "price": price_sale * 0.90, # Vender 10% mais barato
+            "cost": cost_product * 1.10, # Custo sobe 10%
+            "ads": tacos_target * 1.20 # Ads sobem 20%
+        },
+        "Realista (Atual) ☁️": {
+            "price": price_sale,
+            "cost": cost_product,
+            "ads": tacos_target
+        },
+        "Otimista ☀️": {
+            "price": price_sale * 1.10, # Vender 10% mais caro
+            "cost": cost_product * 0.95, # Negociou 5% desconto
+            "ads": tacos_target * 0.80 # Otimizou ads
+        }
+    }
     
-    score = 100
-    warnings = []
-    successes = []
+    scenario_results = []
     
-    # Logic Heuristics
-    if metrics['margin_net'] < 10:
-        score -= 20
-        warnings.append(("CRÍTICO", "Margem líquida abaixo de 10%. Risco alto de prejuízo com qualquer variação de Ads ou Devoluções."))
-    elif metrics['margin_net'] < 15:
-        score -= 10
-        warnings.append(("ATENÇÃO", "Margem saudável, mas aperte os cintos. Ideal buscar > 15-20%."))
-    else:
-        successes.append("Margem Líquida Saudável (>15%).")
-        
-    if metrics['roi'] < 30:
-        score -= 20
-        warnings.append(("BAIXO GIRO", "ROI abaixo de 30%. Seu capital está girando lento. Considere renegociar com fornecedor."))
-    else:
-        successes.append("ROI Excelente (>30%).")
-        
-    if metrics['val_ads'] > metrics['net_profit']:
-        score -= 15
-        warnings.append(("ADS EXPENSIVE", "Você está gastando mais em Ads do que lucrando. Cuidado com o TACOS."))
+    for name, params in scenarios.items():
+        res = calculate_financials(
+            params['price'], params['cost'], cost_inbound, cost_prep, 
+            tax_rate, commission_rate, fba_fee, storage_fee, 
+            params['ads'], return_rate, fixed_fee, misc_costs
+        )
+        scenario_results.append({
+            "Cenário": name,
+            "Preço Venda": f"R$ {params['price']:.2f}",
+            "Lucro Líquido": res['net_profit'],
+            "Margem %": res['margin_net'],
+            "ROI %": res['roi']
+        })
+    
+    df_scenarios = pd.DataFrame(scenario_results)
+    
+    # Exibir como dataframe estilizado
+    st.dataframe(
+        df_scenarios.style.format({
+            "Lucro Líquido": "R$ {:.2f}",
+            "Margem %": "{:.1f}%",
+            "ROI %": "{:.1f}%"
+        }).background_gradient(subset=["Lucro Líquido"], cmap="RdYlGn"),
+        use_container_width=True
+    )
+    
+    st.info("💡 **Dica:** Se o seu cenário 'Pessimista' ainda der lucro positivo, este é um produto muito seguro para lançar.")
 
-    with col_kpi:
-        fig_gauge = go.Figure(go.Indicator(
-            mode = "gauge+number",
-            value = score,
-            domain = {'x': [0, 1], 'y': [0, 1]},
-            title = {'text': "Saúde do Produto"},
-            gauge = {
-                'axis': {'range': [0, 100]},
-                'bar': {'color': COLOR_ORANGE},
-                'steps': [
-                    {'range': [0, 50], 'color': "#ffe0e0"},
-                    {'range': [50, 80], 'color': "#fff3cd"},
-                    {'range': [80, 100], 'color': "#e0f7fa"}]
-            }
-        ))
-        fig_gauge.update_layout(height=300)
-        st.plotly_chart(fig_gauge, use_container_width=True)
+# --- TAB 5: GLOSSÁRIO (NOVO) ---
+with tab5:
+    st.markdown("### 📚 Dicionário do Amazon Seller")
+    st.markdown("Termos essenciais para entender a saúde do seu negócio.")
+    
+    with st.expander("O que é TACOS?"):
+        st.write("""
+        **Total Advertising Cost of Sales.** Diferente do ACOS (que olha só para a venda vinda do anúncio), 
+        o TACOS mede o impacto dos anúncios no faturamento TOTAL (Orgânico + Pago).
+        *Fórmula:* (Gasto Total Ads / Receita Total) * 100.
+        *Meta:* Ideal manter abaixo de 10-15% para produtos maduros.
+        """)
         
-    with col_advice:
-        st.markdown("#### Relatório de Consultoria")
+    with st.expander("O que é ROI vs. Margem?"):
+        st.write("""
+        **Margem:** Quanto sobra do preço de venda. (Ex: Vendi por 100, sobrou 20. Margem 20%).
+        **ROI:** Quanto seu dinheiro rendeu. (Ex: Gastei 50 para comprar e vender o item. Lucrei 20. ROI = 20/50 = 40%).
+        *Dica:* Pague as contas com Margem, mas enriqueça com ROI (Giro de estoque).
+        """)
         
-        for level, msg in warnings:
-            if level == "CRÍTICO":
-                st.error(f"**{level}:** {msg}")
-            else:
-                st.warning(f"**{level}:** {msg}")
-                
-        for msg in successes:
-            st.success(f"**SUCESSO:** {msg}")
+    with st.expander("Custos Ocultos (Storage e Devoluções)"):
+        st.write("""
+        Muitos vendedores esquecem de calcular:
+        1. **Armazenagem:** Se o produto fica parado, você paga aluguel por cm³.
+        2. **Devoluções:** O cliente devolve, a Amazon cobra taxa de envio e as vezes o produto volta "invendável". Sempre reserve 2-5% do faturamento para cobrir isso.
+        """)
+
+# --- AI DIAGNOSIS ---
+st.markdown("---")
+st.subheader("🤖 Diagnóstico Inteligente")
+
+score = 100
+warnings = []
+successes = []
+
+# Logic Heuristics
+if metrics['margin_net'] < 10:
+    score -= 25
+    warnings.append(("CRÍTICO", "Margem líquida perigosamente baixa (<10%). Qualquer aumento no custo de ads vai gerar prejuízo."))
+elif metrics['margin_net'] < 15:
+    score -= 10
+    warnings.append(("ATENÇÃO", "Margem abaixo de 15%. Volume de vendas precisa ser muito alto para compensar."))
+else:
+    successes.append("Margem Líquida saudável (>15%).")
+    
+if metrics['roi'] < 30:
+    score -= 25
+    warnings.append(("BAIXO GIRO", "ROI < 30%. O risco de capital empatado é alto. Tente negociar custo ou aumentar preço."))
+else:
+    successes.append("ROI excelente para Private Label (>30%).")
+    
+if metrics['break_even'] > (price_sale * 0.85):
+    score -= 15
+    warnings.append(("FRAGILIDADE", "Seu Break-even está muito próximo do preço atual. Você tem pouca margem para fazer promoções."))
+
+col_score, col_text = st.columns([1, 3])
+
+with col_score:
+    fig_gauge = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = score,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        gauge = {
+            'axis': {'range': [0, 100]},
+            'bar': {'color': COLOR_ORANGE},
+            'steps': [
+                {'range': [0, 60], 'color': "#ffe0e0"},
+                {'range': [60, 85], 'color': "#fff3cd"},
+                {'range': [85, 100], 'color': "#e0f7fa"}]
+        }
+    ))
+    fig_gauge.update_layout(height=180, margin=dict(t=30, b=30, l=30, r=30))
+    st.plotly_chart(fig_gauge, use_container_width=True)
+
+with col_text:
+    for level, msg in warnings:
+        if level == "CRÍTICO":
+            st.error(f"**{level}:** {msg}")
+        else:
+            st.warning(f"**{level}:** {msg}")
             
-        st.markdown("---")
-        st.caption("Recomendação: Utilize a aba 'Simulação Reversa' para ajustar seu preço de venda ideal com base nos alertas acima.")
+    if not warnings:
+        st.success("🎉 Produto com saúde financeira excelente! Sinal verde para investir.")
+    
+    st.caption("Nota baseada em benchmarks de Top Sellers da Amazon Brasil.")
 
 # Footer
 st.markdown("---")
-st.markdown("<div style='text-align: center; color: #888;'>Amazon FBA Command Center v2.0 | Developed for High Performance Sellers</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: #888; font-size: 12px;'>Amazon FBA Command Center v3.0 | Ultimate Edition</div>", unsafe_allow_html=True)
